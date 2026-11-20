@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BC 실수령액 및 생활비 예산 계산기 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f3f6f6; --panel:#ffffff; --fg:#14232a; --muted:#5b6d74; --line:#d6e0e2;
+  --accent:#0f6b72; --accent-soft:#dcefef; --neg:#9b3d2e; --pos:#2e7d32; --warn-bg:#fff4dc; --warn-fg:#6b4a05;
+  --sans:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1719; --panel:#162124; --fg:#e3ecee; --muted:#93a6ac; --line:#2a3a3e;
+  --accent:#5cc3c9; --accent-soft:#183539; --neg:#e58c7a; --pos:#81c784; --warn-bg:#33290f; --warn-fg:#f0d28a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1719; --panel:#162124; --fg:#e3ecee; --muted:#93a6ac; --line:#2a3a3e;
+  --accent:#5cc3c9; --accent-soft:#183539; --neg:#e58c7a; --pos:#81c784; --warn-bg:#33290f; --warn-fg:#f0d28a; color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5;margin:0;padding:0}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:1.6rem;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 22px}
+.grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:20px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+label,.lbl{font-size:.8rem;color:var(--muted);letter-spacing:.03em}
+input[type=number],input[type=text],select{font:500 1rem var(--mono);padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%;box-sizing:border-box}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;padding:8px;border:0;background:transparent;color:var(--fg);font:inherit;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--panel);font-weight:600}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toggle{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:8px;background:var(--warn-bg);color:var(--warn-fg);font-size:.85rem;cursor:pointer}
+.toggle input{margin-top:3px;accent-color:var(--accent)}
+
+.hero{display:flex;flex-wrap:wrap;gap:18px 36px;align-items:baseline;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.big{font:500 2.4rem var(--mono);color:var(--accent);font-variant-numeric:tabular-nums}
+.pp{display:flex;gap:24px;flex-wrap:wrap}
+.pp div{display:flex;flex-direction:column}
+.pp b{font:500 1.15rem var(--mono);font-variant-numeric:tabular-nums}
+
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+td{padding:7px 0;border-bottom:1px dashed var(--line)}
+td.n{text-align:right;font-family:var(--mono)}
+small.mo{display:block;font-size:.78rem;color:var(--muted);font-weight:400}
+small.mo::before{content:"월 "}
+td.c{text-align:right;font-family:var(--mono);color:var(--muted);width:70px}
+tr.neg td.n{color:var(--neg)}
+tr.pos td.n{color:var(--pos)}
+tr.tot td{border-bottom:0;border-top:2px solid var(--fg);font-weight:700;padding-top:10px}
+
+.bar{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:14px 0 6px;background:var(--line)}
+.bar span{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+.stats{display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;font-size:.85rem;color:var(--muted)}
+.stats b{color:var(--fg);font-family:var(--mono)}
+.diff{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--accent-soft);font-size:.88rem}
+.notes{margin-top:22px;font-size:.82rem;color:var(--muted);max-width:70ch}
+.notes li{margin-bottom:6px}
+
+/* 생활비 입력 리스트 디자인 */
+.exp-row{display:grid;grid-template-columns:1fr 120px 30px;gap:8px;align-items:center;margin-bottom:8px}
+.btn-del{background:transparent;border:0;color:var(--neg);font-weight:bold;cursor:pointer;font-size:1.1rem;padding:4px}
+.btn-add{background:var(--accent-soft);color:var(--accent);border:1px dashed var(--accent);border-radius:6px;padding:8px;width:100%;cursor:pointer;font-weight:600;margin-top:6px}
+.btn-add:hover{background:var(--accent);color:#fff}
+
+.summary-card{background:var(--accent-soft);border-radius:8px;padding:16px;margin-top:16px}
+.summary-card .title{font-size:.85rem;color:var(--muted)}
+.summary-card .val{font:700 1.8rem var(--mono);color:var(--accent);margin-top:4px}
+.summary-card .val.plus{color:var(--pos)}
+.summary-card .val.minus{color:var(--neg)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>BC 실수령액 및 생활비 예산 계산기 2026</h1>
+  <p class="sub">2026 세금 계산 + 회사 실비 지원 + 한 달 생활비 및 최종 저축액 산출</p>
+
+  <div class="grid">
+    <!-- 왼쪽: 입력 섹션 -->
+    <div>
+      <!-- 1. 소득 설정 -->
+      <div class="panel">
+        <h3 style="margin:0 0 14px; font-size:1.05rem;">1. 소득 설정 (Taxable Income)</h3>
+        <div class="field">
+          <span class="lbl">입력 방식</span>
+          <div class="seg" role="group">
+            <button type="button" id="mAnnual" aria-pressed="true">연봉</button>
+            <button type="button" id="mHourly" aria-pressed="false">시급</button>
+          </div>
+        </div>
+        <div class="field" id="fAnnual">
+          <label for="annual">연봉 (CAD)</label>
+          <input type="number" id="annual" value="0" min="0" step="1000">
+        </div>
+        <div id="fHourly" hidden>
+          <div class="row2">
+            <div class="field"><label for="hourly">시급 ($)</label><input type="number" id="hourly" value="0" min="0" step="0.25"></div>
+            <div class="field"><label for="hours">주당 시간</label><input type="number" id="hours" value="0" min="0" step="1"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="freq">급여 지급 주기</label>
+          <select id="freq">
+            <option value="26">격주 (Bi-weekly, 26회)</option>
+            <option value="24">월 2회 (Semi-monthly, 24회)</option>
+            <option value="52">매주 (Weekly, 52회)</option>
+            <option value="12" selected>월 1회 (Monthly, 12회)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="rrsp">RRSP 납입 (연간 총액)</label>
+          <input type="number" id="rrsp" value="0" min="0" step="500">
+        </div>
+        <label class="toggle" for="cons">
+          <input type="checkbox" id="cons">
+          <span><b>보수당 공약 적용 (비교용)</b><br>BC 기본공제 $13,216 → $32,000 인상안 적용</span>
+        </label>
+      </div>
+
+      <!-- 2. 회사 실비 지원 -->
+      <div class="panel">
+        <h3 style="margin:0 0 6px; font-size:1.05rem;">2. 회사 실비 지원 (비과세)</h3>
+        <p style="font-size:0.78rem; color:var(--muted); margin:0 0 12px;">세금 계산에서 제외되고 통장으로 바로 받는 월 지급금</p>
+        <div class="row2">
+          <div class="field"><label for="reimbTravel">월 교통/출장비 ($)</label><input type="number" id="reimbTravel" value="0" min="0" step="10"></div>
+          <div class="field"><label for="reimbMeal">월 식대 지원 ($)</label><input type="number" id="reimbMeal" value="0" min="0" step="10"></div>
+        </div>
+      </div>
+
+      <!-- 3. 월 생활비 지출 설정 -->
+      <div class="panel">
+        <h3 style="margin:0 0 6px; font-size:1.05rem;">3. 월 생활비 지출 (Monthly Expenses)</h3>
+        <p style="font-size:0.78rem; color:var(--muted); margin:0 0 12px;">한 달 동안 지출되는 항목들을 입력하세요.</p>
+        
+        <div id="expenseList">
+          <div class="exp-row">
+            <input type="text" class="exp-name" value="월세/렌트비">
+            <input type="number" class="exp-val" value="0" min="0" step="50">
+            <button type="button" class="btn-del" onclick="removeExp(this)">×</button>
+          </div>
+          <div class="exp-row">
+            <input type="text" class="exp-name" value="주유비/교통비">
+            <input type="number" class="exp-val" value="0" min="0" step="10">
+            <button type="button" class="btn-del" onclick="removeExp(this)">×</button>
+          </div>
+          <div class="exp-row">
+            <input type="text" class="exp-name" value="식비 (장보기)">
+            <input type="number" class="exp-val" value="0" min="0" step="10">
+            <button type="button" class="btn-del" onclick="removeExp(this)">×</button>
+          </div>
+          <div class="exp-row">
+            <input type="text" class="exp-name" value="외식비 / 카페">
+            <input type="number" class="exp-val" value="0" min="0" step="10">
+            <button type="button" class="btn-del" onclick="removeExp(this)">×</button>
+          </div>
+          <div class="exp-row">
+            <input type="text" class="exp-name" value="통신/인터넷/공과금">
+            <input type="number" class="exp-val" value="0" min="0" step="10">
+            <button type="button" class="btn-del" onclick="removeExp(this)">×</button>
+          </div>
+        </div>
+        <button type="button" class="btn-add" onclick="addExp()">+ 항목 추가하기</button>
+      </div>
+    </div>
+
+    <!-- 오른쪽: 정산 및 결과 산출 패널 -->
+    <div>
+      <!-- A. 실수령액 및 세금 내역 -->
+      <div class="panel">
+        <h3 style="margin:0 0 14px; font-size:1.05rem;">급여 및 세금 명세</h3>
+        <div class="hero">
+          <div><div class="lbl">연 실수령액 (실비 포함)</div><div class="big" id="net">–</div></div>
+          <div class="pp">
+            <div><span class="lbl">월 총 수령액</span><b id="mon">–</b></div>
+            <div><span class="lbl" id="ppLbl">회당 수령액</span><b id="per">–</b></div>
+          </div>
+        </div>
+
+        <table>
+          <tr><td>총 세전 급여 (Gross)</td><td class="n"><span id="gross"></span><small class="mo" id="grossM"></small></td><td class="c"></td></tr>
+          <tr class="neg"><td>연방 소득세 (Federal Tax)</td><td class="n"><span id="fed"></span><small class="mo" id="fedM"></small></td><td class="c" id="fedP"></td></tr>
+          <tr class="neg"><td>BC주 소득세 (Provincial Tax)</td><td class="n"><span id="bc"></span><small class="mo" id="bcM"></small></td><td class="c" id="bcP"></td></tr>
+          <tr class="neg"><td>CPP (국민연금)</td><td class="n"><span id="cpp"></span><small class="mo" id="cppM"></small></td><td class="c" id="cppP"></td></tr>
+          <tr class="neg"><td>CPP2 (추가 연금)</td><td class="n"><span id="cpp2"></span><small class="mo" id="cpp2M"></small></td><td class="c" id="cpp2P"></td></tr>
+          <tr class="neg"><td>EI (고용보험)</td><td class="n"><span id="ei"></span><small class="mo" id="eiM"></small></td><td class="c" id="eiP"></td></tr>
+          <tr class="neg" id="rrspRow"><td>RRSP 납입액</td><td class="n"><span id="rr"></span><small class="mo" id="rrM"></small></td><td class="c"></td></tr>
+          <tr class="pos" id="reimbRow" hidden><td>회사 비과세 지원금 (월합산)</td><td class="n"><span id="reimbTot"></span><small class="mo" id="reimbTotM"></small></td><td class="c"></td></tr>
+          <tr class="tot"><td>최종 통장 입금액 (연기준)</td><td class="n"><span id="net2"></span><small class="mo" id="net2M"></small></td><td class="c" id="netP"></td></tr>
+        </table>
+
+        <div class="bar" id="bar"></div>
+        <div class="legend">
+          <span><i style="background:var(--accent)"></i>실수령액</span>
+          <span><i style="background:#c86b55"></i>연방세</span>
+          <span><i style="background:#d9a441"></i>BC주세</span>
+          <span><i style="background:#7c8fa8"></i>CPP·EI</span>
+        </div>
+
+        <div class="stats">
+          <span>한계세율: <b id="marg"></b></span>
+          <span>실효세율(소득세): <b id="eff"></b></span>
+        </div>
+        <div class="diff" id="diff" hidden></div>
+      </div>
+
+      <!-- B. 최종 월간 예산 및 저축 정산 -->
+      <div class="panel">
+        <h3 style="margin:0 0 14px; font-size:1.05rem;">📊 월간 예산 & 저축 정산 (Monthly Budget)</h3>
+        <table>
+          <tr class="pos"><td>월 총 수령액 (급여 + 실비지원)</td><td class="n" id="bMonthlyInc">$0</td></tr>
+          <tr class="neg"><td>월 총 생활비 지출</td><td class="n" id="bMonthlyExp">$0</td></tr>
+        </table>
+
+        <div class="summary-card">
+          <div class="title">한 달에 저축 가능한 금액 (Remaining Savings)</div>
+          <div class="val" id="bSavings">$0</div>
+          <div style="font-size:0.8rem; margin-top:4px; color:var(--muted);" id="bSavingsRatio">저축률: 0%</div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <span class="lbl">지출 및 저축 비중</span>
+          <div class="bar" id="budgetBar" style="height:16px; margin-top:6px;"></div>
+          <div class="legend" id="budgetLegend"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ul class="notes">
+    <li><b>2026 세금 기준</b>: 연방 최저 14%, BC주 최저 5.60% (NDP 예산안), CPP 5.95% (최대 $4,230.45), EI 1.63% (최대 $1,123.07) 반영.</li>
+    <li><b>회사 실비 지원</b>: 출장비, 식대 지원 등은 세전 소득에 합산되지 않는 비과세 환급(Reimbursement)금으로 계산되어 실수령액에 합산됩니다.</li>
+    <li><b>생활비 정산</b>: 입력하신 생활비 지출 총액을 계산된 월 실수령액에서 차감하여 매달 저축 가능한 순수 금액을 추정합니다.</li>
+  </ul>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const money=v=>(v<0?"-$":"$")+Math.abs(Math.round(v)).toLocaleString("en-CA");
+const pct=v=>(v*100).toFixed(1)+"%";
+
+function bracketTax(x,b){let t=0,prev=0;for(const[cap,r]of b){if(x<=prev)break;t+=(Math.min(x,cap)-prev)*r;prev=cap;}return t;}
+const FED=[[58523,.14],[117045,.205],[181440,.26],[258482,.29],[Infinity,.33]];
+const BCB=[[50363,.056],[100728,.077],[115648,.105],[140430,.1229],[190405,.147],[265545,.168],[Infinity,.205]];
+function margRate(x,b){for(const[cap,r]of b)if(x<cap)return r;return b[b.length-1][1];}
+
+function calcTax(g,rrsp,cons){
+  const pens=Math.max(0,Math.min(g,74600)-3500);
+  const cppBase=pens*.0495, cppEnh=pens*.01, cpp=cppBase+cppEnh;
+  const cpp2=Math.max(0,Math.min(g,85000)-74600)*.04;
+  const ei=Math.min(g,68900)*.0163;
+  const taxable=Math.max(0,g-cppEnh-cpp2-rrsp);
+  let bpaF=16452; if(taxable>181440) bpaF=taxable>=258482?14829:16452-(taxable-181440)/(258482-181440)*(16452-14829);
+  const fed=Math.max(0,bracketTax(taxable,FED)-.14*(bpaF+Math.min(1501,g)+cppBase+ei));
+  const bpaB=cons?32000:13216;
+  let bc=Math.max(0,bracketTax(taxable,BCB)-.056*(bpaB+cppBase+ei));
+  const red=Math.max(0,690-Math.max(0,taxable-25570)*.0356);
+  bc=Math.max(0,bc-red);
+  const netTaxable=g-fed-bc-cpp-cpp2-ei-rrsp;
+  return{g,fed,bc,cpp,cpp2,ei,rrsp,netTaxable,taxable};
+}
+
+let mode="annual";
+
+function getGross(){
+  return mode==="annual" ? (+$("annual").value||0) : (+$("hourly").value||0)*(+$("hours").value||0)*52;
+}
+
+function addExp(){
+  const list = $("expenseList");
+  const div = document.createElement("div");
+  div.className = "exp-row";
+  div.innerHTML = `
+    <input type="text" class="exp-name" value="기타 지출">
+    <input type="number" class="exp-val" value="0" min="0" step="10">
+    <button type="button" class="btn-del" onclick="removeExp(this)">×</button>
+  `;
+  list.appendChild(div);
+  bindExpEvents();
+  render();
+}
+
+function removeExp(btn){
+  btn.parentElement.remove();
+  render();
+}
+
+function bindExpEvents(){
+  document.querySelectorAll(".exp-val, .exp-name").forEach(el=>{
+    el.oninput = render;
+  });
+}
+
+function render(){
+  const g = getGross();
+  const rr = +$("rrsp").value||0;
+  const cons = $("cons").checked;
+  const f = +$("freq").value;
+
+  const reimb = (+$("reimbTravel").value||0) + (+$("reimbMeal").value||0);
+  const annualReimb = reimb * 12;
+
+  const t = calcTax(g, rr, cons);
+  const totalNetAnnual = t.netTaxable + annualReimb;
+  const monthlyNet = totalNetAnnual / 12;
+
+  // 1. 소득 및 세금 업데이트
+  $("net").textContent = money(totalNetAnnual);
+  $("net2").textContent = money(totalNetAnnual);
+  $("mon").textContent = money(monthlyNet);
+  $("per").textContent = money(totalNetAnnual / f);
+  $("ppLbl").textContent = ({26:"격주 회당",24:"반월 회당",52:"주당",12:"월급"})[f];
+  $("gross").textContent = money(g);
+  $("grossM").textContent = money(g/12);
+  $("net2M").textContent = money(monthlyNet);
+
+  for(const k of ["fed","bc","cpp","cpp2","ei"]){
+    $(k).textContent = "−" + money(t[k]);
+    $(k+"M").textContent = "−" + money(t[k]/12);
+    $(k+"P").textContent = g ? pct(t[k]/g) : "";
+  }
+  $("rr").textContent = "−" + money(rr);
+  $("rrM").textContent = "−" + money(rr/12);
+  $("rrspRow").hidden = !rr;
+
+  if(annualReimb > 0){
+    $("reimbRow").hidden = false;
+    $("reimbTot").textContent = "+" + money(annualReimb);
+    $("reimbTotM").textContent = "+" + money(annualReimb/12);
+  } else {
+    $("reimbRow").hidden = true;
+  }
+
+  $("netP").textContent = g ? pct(totalNetAnnual/g) : "";
+
+  // 세금 구분 바
+  const base = Math.max(1, g + annualReimb);
+  const parts = [
+    [t.netTaxable, "var(--accent)"],
+    [annualReimb, "var(--pos)"],
+    [t.fed, "#c86b55"],
+    [t.bc, "#d9a441"],
+    [t.cpp+t.cpp2+t.ei, "#7c8fa8"],
+    [rr, "var(--muted)"]
+  ];
+  $("bar").innerHTML = parts.map(([v,c])=>`<span style="width:${Math.max(0,v/base*100)}%;background:${c}"></span>`).join("");
+
+  const mf = margRate(t.taxable, FED), mb = margRate(t.taxable, BCB);
+  $("marg").textContent = pct(mf+mb);
+  $("eff").textContent = g ? pct((t.fed+t.bc)/g) : "–";
+
+  const d = $("diff");
+  if(cons){
+    const o = calcTax(g, rr, false);
+    d.hidden = false;
+    d.innerHTML = `공약 적용 시 현행 대비 연 <b>${money(t.netTaxable - o.netTaxable)}</b> 추가 수령 (월 ${money((t.netTaxable - o.netTaxable)/12)}).`;
+  } else {
+    d.hidden = true;
+  }
+
+  // 2. 월 생활비 및 저축 계산
+  let totalExp = 0;
+  const expItems = [];
+  document.querySelectorAll(".exp-row").forEach(row=>{
+    const name = row.querySelector(".exp-name").value || "지출";
+    const val = +row.querySelector(".exp-val").value || 0;
+    totalExp += val;
+    expItems.push({name, val});
+  });
+
+  $("bMonthlyInc").textContent = money(monthlyNet);
+  $("bMonthlyExp").textContent = "−" + money(totalExp);
+
+  const savings = monthlyNet - totalExp;
+  const savingsEl = $("bSavings");
+  savingsEl.textContent = money(savings);
+
+  if(savings >= 0){
+    savingsEl.className = "val plus";
+  } else {
+    savingsEl.className = "val minus";
+  }
+  $("bSavingsRatio").textContent = "저축률: " + (monthlyNet>0 ? pct(savings/monthlyNet) : "0%");
+
+  // 지출/저축 비중 바
+  const colors=["#c86b55","#d9a441","#7c8fa8","#8a6fb0","#5aa469","#b5677d","#6a9bb5","#a38b5c"];
+  const bbase = Math.max(monthlyNet, totalExp, 1);
+  let html="", leg="";
+  expItems.filter(e=>e.val>0).forEach((e,i)=>{
+    const c=colors[i%colors.length];
+    html+=`<span style="width:${e.val/bbase*100}%;background:${c}"></span>`;
+    leg+=`<span><i style="background:${c}"></i>${e.name.replace(/</g,"&lt;")} ${money(e.val)}</span>`;
+  });
+  if(savings>0){
+    html+=`<span style="width:${savings/bbase*100}%;background:var(--accent)"></span>`;
+    leg+=`<span><i style="background:var(--accent)"></i>저축 ${money(savings)}</span>`;
+  }
+  $("budgetBar").innerHTML = html;
+  $("budgetLegend").innerHTML = leg;
+}
+
+function setMode(m){
+  mode=m;
+  $("mAnnual").setAttribute("aria-pressed", m==="annual");
+  $("mHourly").setAttribute("aria-pressed", m==="hourly");
+  $("fAnnual").hidden = m!=="annual";
+  $("fHourly").hidden = m!=="hourly";
+  render();
+}
+$("mAnnual").onclick=()=>setMode("annual");
+$("mHourly").onclick=()=>setMode("hourly");
+["annual","hourly","hours","freq","rrsp","cons","reimbTravel","reimbMeal"].forEach(id=>{
+  $(id).addEventListener("input",render);
+  $(id).addEventListener("change",render);
+});
+bindExpEvents();
+render();
+</script>
+</body>
+</html>
